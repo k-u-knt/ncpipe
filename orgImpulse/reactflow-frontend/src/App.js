@@ -292,6 +292,8 @@ const App = () => {
             }
           }
         }
+        // Sort functionsList based on 'filename'
+        functionsList.sort((a, b) => a.filename.localeCompare(b.filename));
         // Compare new functionsList with existing fileList
         const isEqual = JSON.stringify(functionsList) === JSON.stringify(fileList);
         if (!isEqual) {
@@ -511,7 +513,8 @@ const App = () => {
                   }));
 
                 await Promise.all(filePromises);
-
+                // Sort functionsList based on 'filename'
+                functionsList.sort((a, b) => a.filename.localeCompare(b.filename));
                 setFileList(functionsList);
               } catch (error) {
                 console.error("Failed to list files:", error);
