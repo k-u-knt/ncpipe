@@ -1,0 +1,296 @@
+.App {
+  text-align: center;
+}
+
+.App-logo {
+  height: 40vmin;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .App-logo {
+    animation: App-logo-spin infinite 20s linear;
+  }
+}
+
+.App-header {
+  background-color: #282c34;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: calc(10px + 2vmin);
+  color: white;
+}
+
+.App-link {
+  color: #61dafb;
+}
+
+@keyframes App-logo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.sidebar {
+  width: 200px;
+  padding: 10px;
+  background-color: #f0f0f0;
+  position: relative; /* Add relative positioning */
+}
+
+.sidebar::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 10px; /* Thickness of the edge */
+  height: 100%;
+  background-color: #007bff; /* Blue color */
+  cursor: ew-resize; /* Make it resizable */
+}
+
+.sidebar::after:active {
+  background-color: magenta; /* Change color to magenta when clicked */
+}
+
+.sidebar h3 {
+  margin-top: 0;
+}
+
+.sidebar ul {
+  list-style-type: none;
+  padding-left: 0;
+}
+
+.sidebar li {
+  margin-bottom: 10px;
+}
+
+.sidebar button {
+  width: 100%;
+}
+
+.folder-section {
+  padding: 10px;
+  margin-bottom: 15px;
+}
+
+.selected-folder {
+  font-size: 0.9em;
+  word-break: break-all;
+  padding: 5px;
+  background: #e9e9e9;
+  border-radius: 4px;
+  margin-bottom: 10px;
+}
+
+.file-list {
+  max-height: 200px;
+  overflow-y: auto;
+  margin-bottom: 15px;
+}
+
+.file-button {
+  width: 100%;
+  text-align: left;
+  padding: 5px 10px;
+  margin: 2px 0;
+  background: #f0f0f0;
+  border: 1px solid #ddd;
+  cursor: pointer;
+}
+
+.file-button:hover {
+  background: #e0e0e0;
+}
+
+.file-button:active {
+  opacity: 0.6;
+}
+
+.custom-node {
+  background: #000; /* White colored node body */
+  color: #fff;
+  border-radius: 5px;
+  min-width: 200px;
+  position: relative;
+  border: 1px solid #ddd;
+}
+
+.custom-node .node-header {
+  background: #007bff; /* Blue colored function name bar */
+  color: #fff;
+  padding: 5px;
+  border-top-left-radius: 5px;
+  border-top-right-radius: 5px;
+  display: flex;
+  align-items: center;
+}
+
+.custom-node .node-icon {
+  margin-right: 8px;
+}
+
+.custom-node .node-title {
+  font-weight: bold;
+}
+
+.custom-node .node-params {
+  padding: 10px;
+  overflow: auto;
+}
+
+.custom-node table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.custom-node td {
+  padding: 1px;
+  border: none; /* Remove border to eliminate the white line */
+}
+
+.custom-node input {
+  width: 100%;
+  padding: 3px;
+  box-sizing: border-box;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+}
+
+.custom-node .loading-indicator {
+  text-align: center;
+  padding: 10px;
+  font-style: italic;
+  color: #555;
+}
+
+.loading-indicator {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100px;
+}
+
+.spinner {
+  border: 4px solid rgba(0, 0, 0, 0.1);
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border-left-color: #09f;
+  animation: spin 1s linear infinite; /* Ensure the animation is linear and infinite */
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* Position handles */
+.custom-node .react-flow__handle-top,
+.custom-node .react-flow__handle-bottom,
+.custom-node .react-flow__handle-left,
+.custom-node .react-flow__handle-right {
+  width: 10px;
+  height: 10px;
+  background: #888; /* Gray colored input/output connection */
+  transition: all 0.2s ease; /* Smooth transition */
+}
+
+.custom-node .react-flow__handle:hover,
+.custom-node .react-flow__handle:active {
+  width: 15px;
+  height: 15px;
+  background: magenta; /* Magenta color when hovering or clicked */
+}
+
+.custom-node .react-flow__handle-left {
+  left: 0; /* Place at the edge of the inside of the node */
+  background: #888; /* Gray colored input/output connection */
+}
+
+.custom-node .react-flow__handle-right {
+  right: 0; /* Place at the edge of the inside of the node */
+  background: #888; /* Gray colored input/output connection */
+}
+
+.custom-node.selected {
+  border: 2px solid magenta; /* Magenta color frame for selected node */
+}
+
+.variable-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.variable-table td {
+  padding: 4px;
+  border: none; /* Remove border to eliminate the white line */
+}
+
+.variable-name {
+  text-align: left;
+  width: 40%;
+}
+
+.variable-input {
+  text-align: right;
+  width: 60%;
+}
+
+.variable-input input {
+  width: 100%;
+  padding: 3px;
+  box-sizing: border-box;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+}
+
+.react-flow__attribution {
+  display: none;
+}
+
+.react-flow__edge-path {
+  stroke-width: 10px; /* Increase the thickness of the edges */
+  stroke: #007bff; /* Change edge color to blue */
+}
+
+.react-flow__edge.selected {
+  stroke: magenta !important;
+}
+
+.custom-handle {
+  width: 10px;
+  height: 100%;
+  background-color: #ccc;
+  cursor: ew-resize;
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.custom-handle::before {
+  content: '';
+  width: 4px;
+  height: 50%;
+  background-color: #888;
+  border-radius: 2px;
+}
+
+.custom-handle:active {
+  background-color: magenta; /* Change color to magenta when clicked */
+}
