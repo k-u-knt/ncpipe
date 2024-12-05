@@ -273,33 +273,60 @@ const App = () => {
     [nodes, edges]
   );
 
+  // Add 'readFolderContents' function
+  const readFolderContents = async () => {
+    if (folderHandle) {
+      try {
+        const functionsList = [];
+        for await (const entry of folderHandle.values()) {
+          if (entry.kind === 'file' && entry.name.endsWith('.py')) {
+            const file = await entry.getFile();
+            const content = await file.text();
+            const functions = getFunctionsAndVariables(content);
+            for (let functionName in functions) {
+              functionsList.push({
+                filename: entry.name,
+                functionName: functionName,
+                parameters: functions[functionName],
+              });
+            }
+          }
+        }
+        // Compare new functionsList with existing fileList
+        const isEqual = JSON.stringify(functionsList) === JSON.stringify(fileList);
+        if (!isEqual) {
+          setFileList(functionsList);
+        }
+      } catch (error) {
+        console.error('Failed to read folder contents:', error);
+      }
+    }
+  };
+
+  // Modify 'handleFolderSelect' to call 'readFolderContents'
   const handleFolderSelect = async () => {
     try {
       const handle = await window.showDirectoryPicker();
       setFolderHandle(handle);
       setFolderPath(handle.name);
-
-      // Read files from the selected folder
-      const functionsList = [];
-      for await (const entry of handle.values()) {
-        if (entry.kind === 'file' && entry.name.endsWith('.py')) {
-          const file = await entry.getFile();
-          const content = await file.text();
-          const functions = getFunctionsAndVariables(content);
-          for (let functionName in functions) {
-            functionsList.push({
-              filename: entry.name,
-              functionName: functionName,
-              parameters: functions[functionName],
-            });
-          }
-        }
-      }
-      setFileList(functionsList);
+      await readFolderContents();
     } catch (error) {
       console.error('Folder selection canceled or failed:', error);
     }
   };
+
+  // Add a useEffect hook to monitor changes
+  useEffect(() => {
+    let interval;
+    if (folderHandle) {
+      interval = setInterval(() => {
+        readFolderContents();
+      }, 5000); // Check every 5 seconds
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [folderHandle]);
 
   // Function to create an empty Python script in the selected folder
   const createScriptFile = async () => {
