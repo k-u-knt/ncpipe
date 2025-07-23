@@ -8,6 +8,7 @@ import json as json_module  # Rename json module import
 import os
 import inspect  # Add import for inspect module
 import ast  # Add import for ast module
+from function_analyzer import FunctionAnalyzer, analyze_folder
 
 app = Sanic("NodePythonExecutor")
 CORS(app)
@@ -148,17 +149,64 @@ async def list_files(request):
         return sanic_json({"error": "Invalid folder path"}, status=400)
 
     try:
+        # Use the new function analyzer
+        analyzer = analyze_folder(folder_path)
+        
+        # Convert to the expected format with enhanced metadata
         files = []
-        for filename in os.listdir(folder_path):
-            full_path = os.path.join(folder_path, filename)
-            if os.path.isfile(full_path) and filename.endswith(".py"):
-                functions = get_functions_and_variables(full_path)
-                if functions:
-                    files.append({
-                        "filename": filename,
-                        "functions": functions
-                    })
-        return sanic_json({"files": files})
+        for func_name, func_meta in analyzer.functions.items():
+            # Only include main functions (not private helper functions)
+            if not func_name.startswith('_'):
+                files.append({
+                    "filename": func_meta.filename,
+                    "functionName": func_meta.name,
+                    "parameters": func_meta.parameters,
+                    "input_folders": func_meta.input_folders,
+                    "output_folders": func_meta.output_folders,
+                    "input_count": func_meta.input_count,
+                    "output_count": func_meta.output_count,
+                    "block_type": func_meta.block_type,
+                    "pipeline_position": func_meta.get_pipeline_position(),
+                    "connectable": analyzer.get_connectable_functions(func_name)
+                })
+        
+        # Sort by pipeline position
+        files.sort(key=lambda x: x["pipeline_position"])
+        
+        return sanic_json({"files": files, "pipeline_metadata": analyzer.to_dict()})
+    except Exception as e:
+        return sanic_json({"error": str(e)}, status=500)
+
+@app.post("/get-connectable-functions")
+async def get_connectable_functions(request):
+    function_name = request.json.get("function_name")
+    folder_path = request.json.get("folder_path")
+    
+    if not folder_path or not os.path.isdir(folder_path):
+        return sanic_json({"error": "Invalid folder path"}, status=400)
+    
+    if not function_name:
+        return sanic_json({"error": "Function name required"}, status=400)
+    
+    try:
+        analyzer = analyze_folder(folder_path)
+        connectable = analyzer.get_connectable_functions(function_name)
+        
+        if function_name in analyzer.functions:
+            func_meta = analyzer.functions[function_name]
+            return sanic_json({
+                "function": function_name,
+                "connectable": connectable,
+                "metadata": {
+                    "input_folders": func_meta.input_folders,
+                    "output_folders": func_meta.output_folders,
+                    "block_type": func_meta.block_type,
+                    "pipeline_position": func_meta.get_pipeline_position()
+                }
+            })
+        else:
+            return sanic_json({"error": f"Function '{function_name}' not found"}, status=404)
+    
     except Exception as e:
         return sanic_json({"error": str(e)}, status=500)
 
