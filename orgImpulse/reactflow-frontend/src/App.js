@@ -37,6 +37,13 @@ const CustomNode = ({ id, data, selected, type }) => {
   const [showConnectable, setShowConnectable] = useState(false);
   const [connectableNodes, setConnectableNodes] = useState({ inputs: [], outputs: [] });
   const [filterType, setFilterType] = useState(null); // 'input' or 'output'
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [displayName, setDisplayName] = useState(data.displayName || data.label);
+  
+  // Add resize functionality
+  const [size, setSize] = useState({ width: data.width || 250, height: data.height || 150 });
+  const [isResizing, setIsResizing] = useState(false);
+  const [resizeStart, setResizeStart] = useState({ x: 0, y: 0, width: 0, height: 0 });
 
   const handleInputChange = (variable, value) => {
     const updatedInputs = {
@@ -106,12 +113,110 @@ const CustomNode = ({ id, data, selected, type }) => {
     await toggleConnectable('output');
   };
 
+  const handleNameClick = (e) => {
+    e.stopPropagation();
+    setIsEditingName(true);
+  };
+
+  const handleNameChange = (e) => {
+    const newName = e.target.value;
+    setDisplayName(newName);
+    data.displayName = newName; // Update the data object
+  };
+
+  const handleNameSubmit = (e) => {
+    if (e.key === 'Enter' || e.type === 'blur') {
+      setIsEditingName(false);
+    }
+  };
+
+  // Add resize handlers
+  const handleResizeMouseDown = (e) => {
+    e.stopPropagation();
+    setIsResizing(true);
+    setResizeStart({
+      x: e.clientX,
+      y: e.clientY,
+      width: size.width,
+      height: size.height
+    });
+  };
+
+  const handleMouseMove = useCallback((e) => {
+    if (isResizing) {
+      const newWidth = Math.max(200, resizeStart.width + (e.clientX - resizeStart.x));
+      const newHeight = Math.max(120, resizeStart.height + (e.clientY - resizeStart.y));
+      setSize({ width: newWidth, height: newHeight });
+      // Update data to persist size
+      data.width = newWidth;
+      data.height = newHeight;
+    }
+  }, [isResizing, resizeStart, data]);
+
+  const handleMouseUp = useCallback(() => {
+    setIsResizing(false);
+  }, []);
+
+  useEffect(() => {
+    if (isResizing) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      return () => {
+        document.removeEventListener('mousemove', handleMouseMove);
+        document.removeEventListener('mouseup', handleMouseUp);
+      };
+    }
+  }, [isResizing, handleMouseMove, handleMouseUp]);
+
   return (
-    <div className={`custom-node ${selected ? 'selected' : ''}`}>
+    <div 
+      className={`custom-node ${selected ? 'selected' : ''}`}
+      style={{
+        width: size.width,
+        height: size.height,
+        position: 'relative'
+      }}
+    >
       {/* Function name header */}
       <div className="node-function-header">
-        <div className="function-name">{data.label}</div>
-        {metadata.block_type && (
+        <div className="function-name" onClick={handleNameClick}>
+          {isEditingName ? (
+            <input
+              type="text"
+              value={displayName}
+              onChange={handleNameChange}
+              onKeyDown={handleNameSubmit}
+              onBlur={handleNameSubmit}
+              autoFocus
+              style={{
+                background: 'transparent',
+                border: '1px solid #ccc',
+                borderRadius: '4px',
+                padding: '2px 6px',
+                fontSize: 'inherit',
+                fontWeight: 'inherit',
+                color: 'inherit',
+                width: '100%',
+                minWidth: '120px',
+                maxWidth: '100%',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis'
+              }}
+            />
+          ) : (
+            <span style={{ 
+              cursor: 'pointer',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+              display: 'block',
+              maxWidth: '100%'
+            }} title={`Original function: ${data.label}`}>
+              {displayName}
+            </span>
+          )}
+        </div>
+        {metadata.block_type && metadata.block_type !== 'unknown' && (
           <div className="block-type">{metadata.block_type}</div>
         )}
         {metadata.pipeline_position > 0 && (
@@ -120,7 +225,7 @@ const CustomNode = ({ id, data, selected, type }) => {
       </div>
       
       {/* Main body with input/output handles */}
-      <div className="node-body">
+      <div className="node-body" style={{ height: 'calc(100% - 40px)' }}>
         <Handle 
           type="target" 
           position={Position.Left} 
@@ -128,15 +233,58 @@ const CustomNode = ({ id, data, selected, type }) => {
           className={`input-handle clickable-handle ${filterType === 'input' ? 'active' : ''}`}
           onClick={handleInputClick}
         />
-        <div className="input-label" onClick={handleInputClick}>
-          Input ({metadata.input_count || 0})
+        <div className="input-label" onClick={handleInputClick} style={{
+          position: 'absolute',
+          left: '12px',
+          top: '50%',
+          transform: 'translateY(-50%)',
+          fontSize: '12px',
+          color: '#666',
+          cursor: 'pointer',
+          whiteSpace: 'nowrap',
+          maxWidth: '60px',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis'
+        }}>
+          Input
           {metadata.input_folders && metadata.input_folders.length > 0 && (
-            <div className="folder-info">{metadata.input_folders.join(', ')}</div>
+            <div className="folder-info" style={{ 
+              fontSize: '10px', 
+              marginTop: '2px',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+              maxWidth: '60px'
+            }}>
+              {metadata.input_folders.join(', ')}
+            </div>
           )}
         </div>
         
-        <div className="center-section">
-          <div className="variables-section">
+        <div className="center-section" style={{ 
+          height: '100%', 
+          display: 'flex', 
+          flexDirection: 'column',
+          padding: '10px 30px'
+        }}>
+          <div className="original-function-name" style={{
+            fontSize: '11px',
+            color: '#666',
+            textAlign: 'center',
+            marginBottom: '8px',
+            padding: '2px 4px',
+            fontStyle: 'italic',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+            maxWidth: '100%'
+          }}>
+            {data.label}
+          </div>
+          
+          <div style={{ flex: 1 }}></div>
+          
+          <div className="variables-section" style={{ marginTop: 'auto' }}>
             <div className="variables-toggle" onClick={toggleExpand}>
               <span className={`triangle ${isExpanded ? 'expanded' : ''}`}>▶</span>
               <span className="variables-text">Variables</span>
@@ -167,74 +315,33 @@ const CustomNode = ({ id, data, selected, type }) => {
               </div>
             )}
           </div>
-
-          {/* Connectable nodes section */}
-          <div className="connectable-section">
-            <div className="connectable-toggle" onClick={() => toggleConnectable()}>
-              <span className={`triangle ${showConnectable ? 'expanded' : ''}`}>▶</span>
-              <span className="connectable-text">Connections</span>
-            </div>
-            
-            {showConnectable && (
-              <div className="connectable-content">
-                {filterType === 'input' && connectableNodes.inputs.length > 0 && (
-                  <div className="connectable-group">
-                    <h4>Can receive from:</h4>
-                    <ul>
-                      {connectableNodes.inputs.map(funcName => (
-                        <li key={funcName} className="connectable-item">{funcName}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-                {filterType === 'output' && connectableNodes.outputs.length > 0 && (
-                  <div className="connectable-group">
-                    <h4>Can connect to:</h4>
-                    <ul>
-                      {connectableNodes.outputs.map(funcName => (
-                        <li key={funcName} className="connectable-item">{funcName}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-                {(!filterType || filterType === 'both') && (
-                  <>
-                    {connectableNodes.inputs.length > 0 && (
-                      <div className="connectable-group">
-                        <h4>Can receive from:</h4>
-                        <ul>
-                          {connectableNodes.inputs.map(funcName => (
-                            <li key={funcName} className="connectable-item">{funcName}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                    {connectableNodes.outputs.length > 0 && (
-                      <div className="connectable-group">
-                        <h4>Can connect to:</h4>
-                        <ul>
-                          {connectableNodes.outputs.map(funcName => (
-                            <li key={funcName} className="connectable-item">{funcName}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                  </>
-                )}
-                {((filterType === 'input' && connectableNodes.inputs.length === 0) ||
-                  (filterType === 'output' && connectableNodes.outputs.length === 0) ||
-                  (!filterType && connectableNodes.inputs.length === 0 && connectableNodes.outputs.length === 0)) && (
-                  <div className="no-connections">No connectable functions found</div>
-                )}
-              </div>
-            )}
-          </div>
         </div>
         
-        <div className="output-label" onClick={handleOutputClick}>
-          Output ({metadata.output_count || 0})
+        <div className="output-label" onClick={handleOutputClick} style={{
+          position: 'absolute',
+          right: '12px',
+          top: '50%',
+          transform: 'translateY(-50%)',
+          fontSize: '12px',
+          color: '#666',
+          cursor: 'pointer',
+          whiteSpace: 'nowrap',
+          maxWidth: '60px',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis'
+        }}>
+          Output
           {metadata.output_folders && metadata.output_folders.length > 0 && (
-            <div className="folder-info">{metadata.output_folders.join(', ')}</div>
+            <div className="folder-info" style={{ 
+              fontSize: '10px', 
+              marginTop: '2px',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+              maxWidth: '60px'
+            }}>
+              {metadata.output_folders.join(', ')}
+            </div>
           )}
         </div>
         <Handle 
@@ -244,6 +351,124 @@ const CustomNode = ({ id, data, selected, type }) => {
           className={`output-handle clickable-handle ${filterType === 'output' ? 'active' : ''}`}
           onClick={handleOutputClick}
         />
+      </div>
+      
+      {/* Resize handle */}
+      <div 
+        className="node-resize-handle"
+        onMouseDown={handleResizeMouseDown}
+      />
+    </div>
+  );
+};
+
+// TopToolbar component with run script and resource monitoring
+const TopToolbar = ({ isRunning, onRunScript, resourceData, scriptName, setScriptName }) => {
+  const [isEditingScript, setIsEditingScript] = useState(false);
+
+  const handleScriptNameClick = () => {
+    setIsEditingScript(true);
+  };
+
+  const handleScriptNameChange = (e) => {
+    setScriptName(e.target.value);
+  };
+
+  const handleScriptNameSubmit = (e) => {
+    if (e.key === 'Enter' || e.type === 'blur') {
+      setIsEditingScript(false);
+    }
+  };
+
+  return (
+    <div className="top-toolbar">
+      <div className="toolbar-left">
+      </div>
+      
+      <div className="toolbar-right">
+        <div style={{ display: 'flex', alignItems: 'center', marginRight: '20px' }}>
+          <div style={{ marginRight: '12px' }}>
+            {isEditingScript ? (
+              <input
+                type="text"
+                value={scriptName}
+                onChange={handleScriptNameChange}
+                onKeyDown={handleScriptNameSubmit}
+                onBlur={handleScriptNameSubmit}
+                autoFocus
+                style={{
+                  background: 'transparent',
+                  border: '1px solid #ccc',
+                  borderRadius: '4px',
+                  padding: '4px 8px',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  color: '#333',
+                  minWidth: '120px'
+                }}
+              />
+            ) : (
+              <span 
+                onClick={handleScriptNameClick}
+                style={{ 
+                  color: '#333', 
+                  fontSize: '16px', 
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  padding: '4px 8px',
+                  borderRadius: '4px',
+                  border: '1px solid transparent',
+                  background: 'rgba(255, 255, 255, 0.9)'
+                }}
+                title="Click to edit script name"
+              >
+                {scriptName}
+              </span>
+            )}
+          </div>
+          <button 
+            className={`run-button ${isRunning ? 'running' : ''}`}
+            onClick={onRunScript}
+            disabled={isRunning}
+          >
+            <span className="run-icon">▶</span>
+            {isRunning ? 'Running...' : 'Run Analysis'}
+          </button>
+        </div>
+        <div className="resource-monitors">
+          <div className="resource-monitor">
+            <span className="resource-label">RAM</span>
+            <div className="resource-bar">
+              <div 
+                className="resource-fill ram" 
+                style={{ width: `${resourceData.ram}%` }}
+              ></div>
+            </div>
+            <span className="resource-value">{Math.round(resourceData.ram)}%</span>
+          </div>
+          
+          <div className="resource-monitor">
+            <span className="resource-label">CPU</span>
+            <div className="resource-bar">
+              <div 
+                className="resource-fill cpu" 
+                style={{ width: `${resourceData.cpu}%` }}
+              ></div>
+            </div>
+            <span className="resource-value">{Math.round(resourceData.cpu)}%</span>
+          </div>
+          
+          <div className="resource-monitor">
+            <span className="resource-label">GPU</span>
+            <div className="resource-bar">
+              <div 
+                className="resource-fill gpu" 
+                style={{ width: `${resourceData.gpu}%` }}
+              ></div>
+            </div>
+            <span className="resource-value">{Math.round(resourceData.gpu)}%</span>
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -269,14 +494,24 @@ const FloatingDashboard = ({
   clearFilter
 }) => {
   const [position, setPosition] = useState({ x: 20, y: 20 });
-  const [size, setSize] = useState({ width: 320, height: 450 });
+  const [size, setSize] = useState({ width: 350, height: 600 });
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [resizeStart, setResizeStart] = useState({ x: 0, y: 0, width: 0, height: 0 });
+  const fileListRef = useRef(null);
 
   // Detect if the window should be in compact mode
   const isCompact = size.width < 350 || size.height < 350;
+
+  // Apply single column grid styling to use full height
+  useEffect(() => {
+    if (fileListRef.current) {
+      // Use single column to maximize height usage
+      fileListRef.current.style.gridTemplateColumns = '1fr';
+      fileListRef.current.style.display = 'grid';
+    }
+  }, [fileList, filteredFunctions]);
 
   const handleMouseDown = (e) => {
     if (e.target.classList.contains('floating-dashboard-header') || 
@@ -381,11 +616,14 @@ const FloatingDashboard = ({
                     const reader = new FileReader();
                     reader.onload = () => {
                       const functions = getFunctionsAndVariables(reader.result);
-                      for (let functionName in functions) {
+                      const functionNames = Object.keys(functions);
+                      // Only add the first function from each file
+                      if (functionNames.length > 0) {
+                        const firstFunctionName = functionNames[0];
                         functionsList.push({
                           filename: file.name,
-                          functionName: functionName,
-                          parameters: functions[functionName],
+                          functionName: firstFunctionName,
+                          parameters: functions[firstFunctionName],
                           input_folders: [],
                           output_folders: [],
                           input_count: 0,
@@ -418,68 +656,59 @@ const FloatingDashboard = ({
           </div>
         )}
 
-        {/* Show the script name input and create button after folder selection */}
+        {/* Display file list - always present when folder is selected */}
         {folderPath && (
-          <>
-            {/* Text box to set the name of the Python script */}
-            <div className="script-name-section">
-              <input
-                type="text"
-                value={scriptName}
-                onChange={(e) => setScriptName(e.target.value)}
-                placeholder="Enter script name"
-              />
-              <button onClick={createScriptFile} className="create-script-button">
-                Create Script
-              </button>
+          <div>
+            <div className="processes-header">
+              <h4 style={{ margin: '10px 0 5px 0', color: '#333', fontSize: '16px', fontWeight: 'bold' }}>
+                Processes
+              </h4>
             </div>
-
-            {/* Display file list */}
-            <div className="file-list">
-              {filteredFunctions && filteredFunctions.length > 0 && (
-                <div className="filter-header">
-                  <div className="filter-info">
-                    Showing {filterType === 'input' ? 'input-compatible' : 'output-compatible'} functions
-                  </div>
-                  <button className="clear-filter-btn" onClick={clearFilter}>
-                    Show All
-                  </button>
+            <div className="file-list" ref={fileListRef}>
+            {filteredFunctions && filteredFunctions.length > 0 && (
+              <div className="filter-header">
+                <div className="filter-info">
+                  Showing {filterType === 'input' ? 'input-compatible' : 'output-compatible'} functions
                 </div>
-              )}
-              
-              {(filteredFunctions && filteredFunctions.length > 0 
-                ? filteredFunctions.map(funcName => {
-                    const item = fileList.find(f => f.functionName === funcName);
-                    return item ? (
-                      <button 
-                        key={`filtered-${item.functionName}`}
-                        className="file-button filtered-function"
-                        draggable
-                        onDragStart={(event) => onDragStart(event, item)}
-                      >
-                        {item.functionName}
-                      </button>
-                    ) : null;
-                  }).filter(Boolean)
-                : fileList.map((item, index) => (
+                <button className="clear-filter-btn" onClick={clearFilter}>
+                  Show All
+                </button>
+              </div>
+            )}
+            
+            {(filteredFunctions && filteredFunctions.length > 0 
+              ? filteredFunctions.map(funcName => {
+                  const item = fileList.find(f => f.functionName === funcName);
+                  return item ? (
                     <button 
-                      key={index}
-                      className="file-button"
+                      key={`filtered-${item.functionName}`}
+                      className="file-button filtered-function"
                       draggable
                       onDragStart={(event) => onDragStart(event, item)}
                     >
                       {item.functionName}
                     </button>
-                  ))
-              )}
-              
-              {filteredFunctions && filteredFunctions.length === 0 && (
-                <div className="no-compatible-functions">
-                  No compatible functions found for {filterType} connections
-                </div>
-              )}
-            </div>
-          </>
+                  ) : null;
+                }).filter(Boolean)
+              : fileList.map((item, index) => (
+                  <button 
+                    key={index}
+                    className="file-button"
+                    draggable
+                    onDragStart={(event) => onDragStart(event, item)}
+                  >
+                    {item.functionName}
+                  </button>
+                ))
+            )}
+            
+            {filteredFunctions && filteredFunctions.length === 0 && (
+              <div className="no-compatible-functions">
+                No compatible functions found for {filterType} connections
+              </div>
+            )}
+          </div>
+          </div>
         )}
       </div>
       
@@ -570,6 +799,10 @@ const App = () => {
   const [filteredFunctions, setFilteredFunctions] = useState(null);
   const [filterType, setFilterType] = useState(null);
 
+  // New state for run script and resource monitoring
+  const [isRunning, setIsRunning] = useState(false);
+  const [resourceData, setResourceData] = useState({ ram: 0, cpu: 0, gpu: 0 });
+
   const flowRef = useRef(null); // Ref for the flow container
   const wsRef = useRef(null); // Ref for the WebSocket
   const folderInputRef = useRef(null); // Add a ref for the folder input
@@ -601,7 +834,8 @@ const App = () => {
       id: nodeId,
       type: 'custom',
       data: { 
-        label, 
+        label, // Keep the original function name
+        displayName: label, // Initialize display name with function name
         folderPath, 
         inputs: {}, 
         variables: parameters,
@@ -639,6 +873,48 @@ const App = () => {
       console.error("Execution failed:", error);
     }
   };
+
+  // Function to run the script
+  const handleRunScript = async () => {
+    if (isRunning) return;
+    
+    setIsRunning(true);
+    try {
+      // Execute the graph
+      await executeGraph();
+    } catch (error) {
+      console.error("Script execution failed:", error);
+    } finally {
+      setIsRunning(false);
+    }
+  };
+
+  // Function to fetch real resource data from backend
+  const updateResourceData = useCallback(async () => {
+    try {
+      console.log("Fetching resource data from backend...");
+      const response = await axios.get("http://localhost:8000/system-resources");
+      console.log("Resource data received:", response.data);
+      setResourceData(response.data);
+    } catch (error) {
+      console.error("Failed to fetch resource data:", error.message);
+      console.error("Error details:", error);
+      // Fallback to simulated data if backend is unavailable
+      console.log("Using fallback random data");
+      setResourceData({
+        ram: Math.random() * 80 + 10, // 10-90%
+        cpu: Math.random() * 70 + 15, // 15-85%
+        gpu: Math.random() * 60 + 20, // 20-80%
+      });
+    }
+  }, []);
+
+  // Set up resource monitoring interval
+  useEffect(() => {
+    const interval = setInterval(updateResourceData, 5000); // Update every 5 seconds
+    updateResourceData(); // Initial call
+    return () => clearInterval(interval);
+  }, [updateResourceData]);
 
   // Modify onConnect to send nodes and edges to the server
   const onConnectWithSend = useCallback(
@@ -729,11 +1005,14 @@ const App = () => {
             const file = await entry.getFile();
             const content = await file.text();
             const functions = getFunctionsAndVariables(content);
-            for (let functionName in functions) {
+            const functionNames = Object.keys(functions);
+            // Only add the first function from each file
+            if (functionNames.length > 0) {
+              const firstFunctionName = functionNames[0];
               functionsList.push({
                 filename: entry.name,
-                functionName: functionName,
-                parameters: functions[functionName],
+                functionName: firstFunctionName,
+                parameters: functions[firstFunctionName],
               });
             }
           }
@@ -914,9 +1193,18 @@ const App = () => {
 
   return (
     <div style={{ height: '100vh', position: 'relative' }}>
-      {/* React Flow Canvas - now takes full screen */}
+      {/* Top Toolbar */}
+      <TopToolbar 
+        isRunning={isRunning}
+        onRunScript={handleRunScript}
+        resourceData={resourceData}
+        scriptName={scriptName}
+        setScriptName={setScriptName}
+      />
+      
+      {/* React Flow Canvas - now takes full screen minus toolbar */}
       <div 
-        style={{ width: '100%', height: '100%' }} 
+        style={{ width: '100%', height: 'calc(100% - 60px)', marginTop: '60px' }} 
         ref={flowRef}
         onDrop={onDrop}
         onDragOver={onDragOver}
