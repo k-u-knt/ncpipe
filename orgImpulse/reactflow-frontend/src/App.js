@@ -132,8 +132,13 @@ const CustomNode = ({ id, data, selected, type }) => {
 
   // Add resize handlers
   const handleResizeMouseDown = (e) => {
+    e.preventDefault();
     e.stopPropagation();
     setIsResizing(true);
+    // Notify parent that this node is being resized
+    if (data.onResizeStateChange) {
+      data.onResizeStateChange(id, true);
+    }
     setResizeStart({
       x: e.clientX,
       y: e.clientY,
@@ -155,7 +160,11 @@ const CustomNode = ({ id, data, selected, type }) => {
 
   const handleMouseUp = useCallback(() => {
     setIsResizing(false);
-  }, []);
+    // Notify parent that this node is no longer being resized
+    if (data.onResizeStateChange) {
+      data.onResizeStateChange(id, false);
+    }
+  }, [data, id]);
 
   useEffect(() => {
     if (isResizing) {
@@ -357,6 +366,18 @@ const CustomNode = ({ id, data, selected, type }) => {
       <div 
         className="node-resize-handle"
         onMouseDown={handleResizeMouseDown}
+        style={{
+          position: 'absolute',
+          bottom: 0,
+          right: 0,
+          width: '20px',
+          height: '20px',
+          cursor: 'se-resize',
+          zIndex: 1001,
+          userSelect: 'none',
+          pointerEvents: 'all'
+        }}
+        title="Drag to resize node"
       />
     </div>
   );
@@ -798,6 +819,7 @@ const App = () => {
   // New state for filtering functions in dashboard
   const [filteredFunctions, setFilteredFunctions] = useState(null);
   const [filterType, setFilterType] = useState(null);
+  const [resizingNodeId, setResizingNodeId] = useState(null); // Track which node is being resized
 
   // New state for run script and resource monitoring
   const [isRunning, setIsRunning] = useState(false);
@@ -811,6 +833,11 @@ const App = () => {
   const handleNodeHandleClick = useCallback((type, connectableFunctions) => {
     setFilteredFunctions(connectableFunctions);
     setFilterType(type);
+  }, []);
+
+  // Function to handle resize state changes
+  const handleNodeResizeStateChange = useCallback((nodeId, isResizing) => {
+    setResizingNodeId(isResizing ? nodeId : null);
   }, []);
 
   // Function to clear filter
@@ -840,7 +867,8 @@ const App = () => {
         inputs: {}, 
         variables: parameters,
         metadata: metadata,
-        onHandleClick: handleNodeHandleClick
+        onHandleClick: handleNodeHandleClick,
+        onResizeStateChange: handleNodeResizeStateChange
       },
       position: position || { x: Math.random() * 400, y: Math.random() * 400 },
     };
@@ -859,7 +887,7 @@ const App = () => {
         })
       );
     }
-  }, [nodes, edges, folderPath, handleNodeHandleClick]);
+  }, [nodes, edges, folderPath, handleNodeHandleClick, handleNodeResizeStateChange]);
 
   // Execute graph logic by sending nodes/edges to the backend
   const executeGraph = async () => {
@@ -962,8 +990,17 @@ const App = () => {
 
   // Use the default onNodesChange without sending updates
   const onNodesChangeWithoutSend = useCallback(
-    (changes) => setNodes((nds) => applyNodeChanges(changes, nds)),
-    [setNodes]
+    (changes) => {
+      // Filter out drag changes for nodes that are being resized
+      const filteredChanges = changes.filter(change => {
+        if (change.type === 'position' && change.id === resizingNodeId) {
+          return false; // Don't apply position changes to the node being resized
+        }
+        return true;
+      });
+      setNodes((nds) => applyNodeChanges(filteredChanges, nds));
+    },
+    [setNodes, resizingNodeId]
   );
 
   // Modify onEdgesChange to send nodes and edges to the server
