@@ -1,4 +1,8 @@
 sanic
+<<<<<<< HEAD
 sanic-cors
 psutil
 asitop
+=======
+sanic_cors
+>>>>>>> 22b5d19b (Add README and requirements files; include initial project setup instructions)
