@@ -10,7 +10,7 @@ The application consists of a Python backend powered by Sanic and a React-based 
 
 ### Prerequisites
 
-- Python 3.7+
+- Python 3.9+ (Sanic 25.x requires Python ≥ 3.8; this repo is tested with Python 3.9)
 - Node.js v14+ and npm
 
 ### Backend Setup
@@ -78,6 +78,36 @@ _**(A video demonstrating the software will be added here.)**_
 
 5.  **Execute the Pipeline:**
     - The execution is currently handled by the backend when changes are made. To trigger an execution of the full graph, you can use the "Execute Graph" button (if available) or see the results update as you build the graph. The results will be displayed in a panel at the bottom of the page.
+
+### Build a pipeline visually
+
+- Click "Select Folder" and choose a folder that contains your .py files.
+- Tip: Use a folder with top-level .py files (the UI focuses on files in the selected directory; nested modules may be skipped).
+- From the sidebar, drag a function into the canvas to create a node.
+- Connect nodes by dragging from a node’s right handle to another node’s left handle.
+- Click into a node and fill in parameter values in the table.
+
+### Generate a runnable script (optional but recommended)
+
+- Enter a script name (e.g., `my_pipeline.py`) and click "Create Script."
+- As you add/connect nodes and set parameters, ncpipe writes a Python script to the chosen folder in real time.
+- You can run that script directly in your environment:
+
+```bash
+python /path/to/your/folder/my_pipeline.py
+```
+
+## How It Works
+
+`ncpipe` is built with a Python backend powered by Sanic and a React frontend. Here’s a brief overview of how it operates:
+
+1.  **Code Analysis:** When you select a folder, the Python backend analyzes the `.py` files within it. It uses Python's Abstract Syntax Tree (`ast`) module to parse the code and identify function definitions, their parameters, and their relationships without actually executing the code.
+
+2.  **Visual Pipeline Construction:** The frontend, built with React and React Flow, takes the information from the backend and displays the functions as nodes that you can drag and drop onto a canvas. You can connect these nodes to define the execution flow of your pipeline.
+
+3.  **Real-time Script Generation:** As you build your visual pipeline, `ncpipe` can generate a Python script in real-time that represents the workflow you've created. This script can be saved and run independently.
+
+4.  **Execution and Monitoring:** When you execute a pipeline, the backend runs the functions in the order you've specified. The application also includes a system resource monitor that provides real-time feedback on CPU, RAM, and GPU usage, helping you understand the performance of your pipeline.
 
 ## Example with `ImAge_workflow`
 
