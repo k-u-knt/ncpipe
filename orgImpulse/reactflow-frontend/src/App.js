@@ -15,7 +15,7 @@ import ReactFlow, {
 } from "react-flow-renderer";
 import axios from "axios";
 import './App.css'; // Import a CSS file for styling
-import { FaFileAlt } from 'react-icons/fa'; // Import an icon
+import { FaFileAlt, FaFolder, FaSave } from 'react-icons/fa'; // Import an icon
 import { saveAs } from 'file-saver'; // Import file-saver to save files
 import { ResizableBox } from 'react-resizable'; // Import ResizableBox from 'react-resizable'
 
@@ -384,7 +384,7 @@ const CustomNode = ({ id, data, selected, type }) => {
 };
 
 // TopToolbar component with run script and resource monitoring
-const TopToolbar = ({ isRunning, onRunScript, resourceData, scriptName, setScriptName }) => {
+const TopToolbar = ({ isRunning, onRunScript, resourceData, scriptName, setScriptName, savePythonScript }) => {
   const [isEditingScript, setIsEditingScript] = useState(false);
 
   const handleScriptNameClick = () => {
@@ -404,49 +404,25 @@ const TopToolbar = ({ isRunning, onRunScript, resourceData, scriptName, setScrip
   return (
     <div className="top-toolbar">
       <div className="toolbar-left">
+        <div className="script-controls">
+          <FaFolder className="icon" />
+          <input
+            type="text"
+            value={scriptName}
+            onChange={handleScriptNameChange}
+            onKeyDown={handleScriptNameSubmit}
+            onBlur={handleScriptNameSubmit}
+            className="script-name-input"
+          />
+          <button onClick={savePythonScript} className="save-button">
+            <FaSave className="icon" />
+            Save Script
+          </button>
+        </div>
       </div>
       
       <div className="toolbar-right">
         <div style={{ display: 'flex', alignItems: 'center', marginRight: '20px' }}>
-          <div style={{ marginRight: '12px' }}>
-            {isEditingScript ? (
-              <input
-                type="text"
-                value={scriptName}
-                onChange={handleScriptNameChange}
-                onKeyDown={handleScriptNameSubmit}
-                onBlur={handleScriptNameSubmit}
-                autoFocus
-                style={{
-                  background: 'transparent',
-                  border: '1px solid #ccc',
-                  borderRadius: '4px',
-                  padding: '4px 8px',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  color: '#333',
-                  minWidth: '120px'
-                }}
-              />
-            ) : (
-              <span 
-                onClick={handleScriptNameClick}
-                style={{ 
-                  color: '#333', 
-                  fontSize: '16px', 
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  padding: '4px 8px',
-                  borderRadius: '4px',
-                  border: '1px solid transparent',
-                  background: 'rgba(255, 255, 255, 0.9)'
-                }}
-                title="Click to edit script name"
-              >
-                {scriptName}
-              </span>
-            )}
-          </div>
           <button 
             className={`run-button ${isRunning ? 'running' : ''}`}
             onClick={onRunScript}
@@ -829,6 +805,48 @@ const App = () => {
   const wsRef = useRef(null); // Ref for the WebSocket
   const folderInputRef = useRef(null); // Add a ref for the folder input
 
+  // Function to generate Python script from nodes and edges
+  const generatePythonScript = (nodes, edges) => {
+    let script = '';
+    const nodeMap = new Map(nodes.map(node => [node.id, node]));
+    const visited = new Set();
+
+    const visitNode = (nodeId) => {
+      if (visited.has(nodeId)) return;
+      visited.add(nodeId);
+
+      const node = nodeMap.get(nodeId);
+      const { label, inputs, variables } = node.data;
+      const filename = node.data.label + '.py'; // Remove folder path
+      const isConnected = edges.some(edge => edge.source === node.id || edge.target === node.id);
+      const commentPrefix = isConnected ? '' : '# ';
+
+      script += `${commentPrefix}from ${filename.replace('.py', '')} import ${label}\n`;
+      const params = variables.map(variable => {
+        const [varName] = variable.replace(/"/g, '').split(':').map(v => v.trim());
+        return `${varName}=${inputs[varName] || 'None'}`;
+      }).join(', ');
+      script += `${commentPrefix}${label}(${params})\n\n`;
+
+      edges.filter(edge => edge.source === nodeId).forEach(edge => visitNode(edge.target));
+    };
+
+    nodes.forEach(node => {
+      if (!edges.some(edge => edge.target === node.id)) {
+        visitNode(node.id);
+      }
+    });
+
+    return script;
+  };
+  
+  // Function to save the generated Python script
+  const savePythonScript = () => {
+    const script = generatePythonScript(nodes, edges);
+    const blob = new Blob([script], { type: 'text/plain;charset=utf-8' });
+    saveAs(blob, scriptName);
+  };
+
   // Function to handle handle clicks from nodes
   const handleNodeHandleClick = useCallback((type, connectableFunctions) => {
     setFilteredFunctions(connectableFunctions);
@@ -1186,124 +1204,69 @@ const App = () => {
     event.dataTransfer.dropEffect = 'move';
   };
 
-  // Function to generate Python script from nodes and edges
-  const generatePythonScript = (nodes, edges) => {
-    let script = '';
-    const nodeMap = new Map(nodes.map(node => [node.id, node]));
-    const visited = new Set();
-
-    const visitNode = (nodeId) => {
-      if (visited.has(nodeId)) return;
-      visited.add(nodeId);
-
-      const node = nodeMap.get(nodeId);
-      const { label, inputs, variables } = node.data;
-      const filename = node.data.label + '.py'; // Remove folder path
-      const isConnected = edges.some(edge => edge.source === node.id || edge.target === node.id);
-      const commentPrefix = isConnected ? '' : '# ';
-
-      script += `${commentPrefix}from ${filename.replace('.py', '')} import ${label}\n`;
-      const params = variables.map(variable => {
-        const [varName] = variable.replace(/"/g, '').split(':').map(v => v.trim());
-        return `${varName}=${inputs[varName] || 'None'}`;
-      }).join(', ');
-      script += `${commentPrefix}${label}(${params})\n\n`;
-
-      edges.filter(edge => edge.source === nodeId).forEach(edge => visitNode(edge.target));
-    };
-
-    nodes.forEach(node => {
-      if (!edges.some(edge => edge.target === node.id)) {
-        visitNode(node.id);
-      }
-    });
-
-    return script;
-  };
-
-  // Function to save the generated Python script
-  const savePythonScript = () => {
-    const script = generatePythonScript(nodes, edges);
-    const blob = new Blob([script], { type: 'text/plain;charset=utf-8' });
-    saveAs(blob, scriptName);
-  };
-
   return (
-    <div style={{ height: '100vh', position: 'relative' }}>
-      {/* Top Toolbar */}
+    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
       <TopToolbar 
         isRunning={isRunning}
         onRunScript={handleRunScript}
         resourceData={resourceData}
         scriptName={scriptName}
         setScriptName={setScriptName}
+        savePythonScript={savePythonScript}
       />
-      
-      {/* React Flow Canvas - now takes full screen minus toolbar */}
-      <div 
-        style={{ width: '100%', height: 'calc(100% - 60px)', marginTop: '60px' }} 
-        ref={flowRef}
-        onDrop={onDrop}
-        onDragOver={onDragOver}
-      >
-        <ReactFlow
-          nodes={nodes}
-          edges={edges}
-          onNodesChange={onNodesChangeWithoutSend}
-          onEdgesChange={onEdgesChangeWithSend}
-          onConnect={onConnectWithSend}
-          onInit={setReactFlowInstance}
-          edgeTypes={edgeTypes}             // Add edgeTypes to ReactFlow
-          edgeOptions={{ type: 'custom' }}  // Set the default edge type
-          zoomOnScroll={false}
-          panOnScroll={false}
-          fitView
-          nodeTypes={nodeTypes}
+      <div style={{ display: 'flex', flex: 1, marginTop: '60px' }}>
+        <FloatingDashboard 
+          folderPath={folderPath}
+          setFolderPath={setFolderPath}
+          handleFolderSelect={handleFolderSelect}
+          folderInputRef={folderInputRef}
+          loading={loading}
+          setLoading={setLoading}
+          scriptName={scriptName}
+          setScriptName={setScriptName}
+          createScriptFile={createScriptFile}
+          fileList={fileList}
+          setFileList={setFileList}
+          onDragStart={onDragStart}
+          getFunctionsAndVariables={getFunctionsAndVariables}
+          filteredFunctions={filteredFunctions}
+          filterType={filterType}
+          clearFilter={clearFilter}
+        />
+        <div 
+          style={{ flexGrow: 1 }} 
+          ref={flowRef}
+          onDrop={onDrop}
+          onDragOver={onDragOver}
         >
-          <MiniMap />
-          <Controls />
-          <Background />
-          
-          {/* SVG Gradient Definition for Edges */}
-          <svg style={{ position: 'absolute', width: 0, height: 0 }}>
-            <defs>
-              <linearGradient id="edgeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                <stop offset="0%" stopColor="rgba(99, 102, 241, 0.8)" />
-                <stop offset="50%" stopColor="rgba(139, 92, 246, 0.9)" />
-                <stop offset="100%" stopColor="rgba(99, 102, 241, 0.8)" />
-              </linearGradient>
-            </defs>
-          </svg>
-        </ReactFlow>
+          <ReactFlow
+            nodes={nodes}
+            edges={edges}
+            onNodesChange={onNodesChangeWithoutSend}
+            onEdgesChange={onEdgesChangeWithSend}
+            onConnect={onConnectWithSend}
+            onInit={setReactFlowInstance}
+            edgeTypes={edgeTypes}             // Add edgeTypes to ReactFlow
+            edgeOptions={{ type: 'custom' }}  // Set the default edge type
+            zoomOnScroll={false}
+            panOnScroll={false}
+            fitView
+            nodeTypes={nodeTypes}
+          >
+            <MiniMap />
+            <Controls />
+            <Background />
+          </ReactFlow>
 
-        {/* Display Results */}
-        {results && (
-          <div style={{ position: 'absolute', bottom: 10, left: 10 }}>
-            <h3>Results</h3>
-            <pre>{JSON.stringify(results, null, 2)}</pre>
-          </div>
-        )}
+          {/* Display Results */}
+          {results && (
+            <div style={{ position: 'absolute', bottom: 10, left: 10 }}>
+              <h3>Results</h3>
+              <pre>{JSON.stringify(results, null, 2)}</pre>
+            </div>
+          )}
+        </div>
       </div>
-
-      {/* Floating Dashboard */}
-      <FloatingDashboard
-        folderPath={folderPath}
-        setFolderPath={setFolderPath}
-        handleFolderSelect={handleFolderSelect}
-        folderInputRef={folderInputRef}
-        loading={loading}
-        setLoading={setLoading}
-        scriptName={scriptName}
-        setScriptName={setScriptName}
-        createScriptFile={createScriptFile}
-        fileList={fileList}
-        setFileList={setFileList}
-        onDragStart={onDragStart}
-        getFunctionsAndVariables={getFunctionsAndVariables}
-        filteredFunctions={filteredFunctions}
-        filterType={filterType}
-        clearFilter={clearFilter}
-      />
     </div>
   );
 };

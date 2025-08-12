@@ -121,6 +121,48 @@
   align-items: center;
 }
 
+.script-controls {
+  display: flex;
+  align-items: center;
+  background-color: rgba(255, 255, 255, 0.1);
+  padding: 4px;
+  border-radius: 8px;
+}
+
+.script-controls .icon {
+  color: white;
+  margin: 0 8px;
+}
+
+.script-name-input {
+  background: transparent;
+  border: none;
+  color: white;
+  font-size: 14px;
+  font-weight: 500;
+  outline: none;
+  width: 150px;
+}
+
+.save-button {
+  background: #4f46e5;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.save-button:hover {
+  background: #4338ca;
+}
+
 .toolbar-right {
   display: flex;
   align-items: center;
