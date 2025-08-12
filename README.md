@@ -2,7 +2,7 @@
 
 **Caution: This is a development repository and is not intended for full production use yet. Use at your own risk.**
 
-`ncpipe` is a tool that allows you to visually create and execute pipelines of Python functions. It is designed to work alongside the [ImAge_workflow](https://github.com/terskikh-lab/ImAge_workflow) to provide a user-friendly interface for running complex image analysis workflows. However, it can be used with any set of Python functions.
+`ncpipe` is a general-purpose tool that allows you to visually create and execute pipelines of Python functions. While it can be used with any set of Python scripts, it is useful for orchestrating multi-step workflows, like the one provided by the [ImAge_workflow](https://github.com/terskikh-lab/ImAge_workflow) repository.
 
 The application consists of a Python backend powered by Sanic and a React-based frontend using React Flow.
 
@@ -18,7 +18,7 @@ The application consists of a Python backend powered by Sanic and a React-based 
 1.  **Clone the repository:**
     ```bash
     git clone <repository-url>
-    cd ncpipe/orgImpulse
+    cd ncpipe
     ```
 
 2.  **Create and activate a Python virtual environment:**
@@ -29,12 +29,12 @@ The application consists of a Python backend powered by Sanic and a React-based 
 
 3.  **Install the required Python packages:**
     ```bash
-    pip install -r requirements.txt
+    pip install -r orgImpulse/requirements.txt
     ```
 
 4.  **Run the backend server:**
     ```bash
-    python server.py
+    python orgImpulse/server.py
     ```
     The server will start on `http://localhost:8000`.
 
@@ -42,7 +42,7 @@ The application consists of a Python backend powered by Sanic and a React-based 
 
 1.  **Navigate to the frontend directory:**
     ```bash
-    cd reactflow-frontend
+    cd orgImpulse/reactflow-frontend
     ```
 
 2.  **Install npm dependencies:**
@@ -56,11 +56,32 @@ The application consists of a Python backend powered by Sanic and a React-based 
     ```
     The application will open in your browser at `http://localhost:3000`.
 
-## How to Use with ImAge_workflow
+## How to Use
 
 ## Demonstration Video
 
 _**(A video demonstrating the software will be added here.)**_
+
+1.  **Select a Folder:** Click the "Select Folder" button in the sidebar to choose a directory containing your Python scripts. The application will parse the files and list the available functions.
+
+2.  **Build Your Pipeline:**
+    - Drag functions from the sidebar and drop them onto the canvas to create nodes.
+    - Click and drag from the handle on the right side of a node to the handle on the left side of another node to connect them and define the execution flow.
+
+3.  **Configure Functions:**
+    - For each node on the canvas, you will see a table of its parameters.
+    - Fill in the required values for each parameter in the input fields.
+
+4.  **Create a Pipeline Script:**
+    - After selecting a folder, you can specify a name for your pipeline script (e.g., `my_pipeline.py`).
+    - Click "Create Script". This will create a new Python file in the selected folder that represents your visual pipeline. As you build your pipeline in the UI, this script will be updated in real-time.
+
+5.  **Execute the Pipeline:**
+    - The execution is currently handled by the backend when changes are made. To trigger an execution of the full graph, you can use the "Execute Graph" button (if available) or see the results update as you build the graph. The results will be displayed in a panel at the bottom of the page.
+
+## Example with `ImAge_workflow`
+
+While `ncpipe` is a general-purpose tool, it can be effectively used to run the `ImAge_workflow`. Here’s how:
 
 1.  **Set up the `ImAge_workflow` repository:**
     - Clone the [ImAge_workflow repository](https://github.com/terskikh-lab/ImAge_workflow).
@@ -83,15 +104,3 @@ _**(A video demonstrating the software will be added here.)**_
 4.  **Configure and Execute:**
     - Fill in the parameters for each node. This will likely involve specifying paths to your data and configuration files.
     - Once the pipeline is configured, you can create a pipeline script and execute it.
-
-## Example with `ImAge_workflow`
-
-When you select the `workflows` directory from the `ImAge_workflow` repository, `ncpipe` will discover the functions within the scripts. For example, it will find and list functions from the following files:
-
--   `o1_illumination_correction.py`
--   `o2_segmentation.py`
--   `o3_extract_features.py`
--   `o4_image_axis.py`
--   `visualization.py`
-
-You can then drag these functions to build a visual representation of the `ImAge_workflow` pipeline, customize their parameters, and execute the entire workflow from the `ncpipe` interface.
