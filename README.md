@@ -60,7 +60,7 @@ The application consists of a Python backend powered by Sanic and a React-based 
 
 ## Demonstration Video
 
-_**(A video demonstrating the software will be added here.)**_
+<video src="NCPIPE_demo.mp4" controls></video>
 
 1.  **Select a Folder:** Click the "Select Folder" button in the sidebar to choose a directory containing your Python scripts. The application will parse the files and list the available functions.
 
