@@ -515,5 +515,49 @@ async def list_function_variables(request):
     if not function_found:
         return sanic_json({"error": f"Function '{function_name}' not found"}, status=400)
 
+@app.route("/select-project-location", methods=["GET"])
+async def select_project_location(request):
+    root = tk.Tk()
+    root.withdraw()
+    folder_path = filedialog.askdirectory()
+    if folder_path:
+        return sanic_json({"folder_path": folder_path})
+    return sanic_json({"error": "No folder selected"}, status=400)
+
+@app.route("/save-script", methods=["POST"])
+async def save_script(request):
+    data = request.json
+    file_path = data.get("file_path")
+    content = data.get("content")
+    
+    if not file_path or content is None:
+        return sanic_json({"status": "error", "message": "Missing file_path or content"}, status=400)
+        
+    try:
+        # Ensure directory exists
+        os.makedirs(os.path.dirname(file_path), exist_ok=True)
+        with open(file_path, "w") as f:
+            f.write(content)
+        return sanic_json({"status": "success", "message": f"Script saved to {file_path}"})
+    except Exception as e:
+        return sanic_json({"status": "error", "message": str(e)}, status=500)
+
+@app.route("/delete-file", methods=["POST"])
+async def delete_file(request):
+    data = request.json
+    file_path = data.get("file_path")
+    
+    if not file_path:
+        return sanic_json({"status": "error", "message": "Missing file_path"}, status=400)
+        
+    try:
+        if os.path.exists(file_path):
+            os.remove(file_path)
+            return sanic_json({"status": "success", "message": f"File {file_path} deleted"})
+        else:
+            return sanic_json({"status": "success", "message": f"File {file_path} not found, nothing to delete"})
+    except Exception as e:
+        return sanic_json({"status": "error", "message": str(e)}, status=500)
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8000)
